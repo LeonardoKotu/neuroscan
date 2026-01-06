@@ -22,6 +22,7 @@ document.querySelectorAll('.nav-list a').forEach(link => {
 
 // Смена языка
 const langSwitch = document.getElementById('langSwitch');
+const langFlag = document.querySelector('.lang-flag');
 const langCode = document.querySelector('.lang-code');
 const htmlElement = document.getElementById('html');
 
@@ -32,6 +33,7 @@ langSwitch.addEventListener('click', () => {
     currentLang = currentLang === 'ru' ? 'en' : 'ru';
     
     // Обновление отображения переключателя
+    langFlag.textContent = currentLang === 'ru' ? '🇷🇺' : '🇺🇸';
     langCode.textContent = currentLang.toUpperCase();
     
     // Обновление атрибута lang у html
@@ -52,14 +54,114 @@ function applyTranslations(lang) {
         
         // Проверяем, существует ли перевод для этого ключа
         if (langData[key] !== undefined) {
-            // Для input и textarea меняем placeholder, для остальных - textContent
+            // Для input, textarea, select меняем placeholder, для остальных - textContent
             if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
                 element.placeholder = langData[key];
+            } else if (element.tagName === 'SELECT') {
+                // Для select обновляем option тексты
+                if (key === 'contact.formRole') {
+                    const options = element.querySelectorAll('option');
+                    if (lang === 'en') {
+                        options[0].textContent = '';
+                        options[1].textContent = 'Radiologist';
+                        options[2].textContent = 'Oncologist';
+                        options[3].textContent = 'Clinic Administrator';
+                        options[4].textContent = 'Other';
+                    } else {
+                        options[0].textContent = '';
+                        options[1].textContent = 'Врач-рентгенолог';
+                        options[2].textContent = 'Врач-онколог';
+                        options[3].textContent = 'Администратор клиники';
+                        options[4].textContent = 'Другое';
+                    }
+                }
             } else {
                 element.textContent = langData[key];
             }
         }
     });
+}
+
+// Анимация появления при скролле
+function initScrollAnimations() {
+    const animatedElements = document.querySelectorAll('.animate-on-scroll');
+    
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const element = entry.target;
+                const animationType = element.getAttribute('data-animation');
+                const delay = element.getAttribute('data-delay') || 0;
+                
+                setTimeout(() => {
+                    element.classList.add('animated');
+                    
+                    // Запуск счетчиков для count-up анимации
+                    if (animationType === 'count-up') {
+                        const counters = element.querySelectorAll('.counter');
+                        counters.forEach(counter => {
+                            const target = parseInt(counter.getAttribute('data-count'));
+                            const duration = 2000;
+                            const step = target / (duration / 16); // 60fps
+                            let current = 0;
+                            
+                            const timer = setInterval(() => {
+                                current += step;
+                                if (current >= target) {
+                                    current = target;
+                                    clearInterval(timer);
+                                }
+                                counter.textContent = Math.floor(current);
+                            }, 16);
+                        });
+                    }
+                }, delay);
+            }
+        });
+    }, {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+    });
+    
+    animatedElements.forEach(el => observer.observe(el));
+}
+
+// Анимация цифр в статистике героя
+function initHeroStatsAnimation() {
+    const statNumbers = document.querySelectorAll('[data-count]');
+    
+    statNumbers.forEach(stat => {
+        const target = parseFloat(stat.getAttribute('data-count'));
+        const suffix = stat.nextElementSibling;
+        let current = 0;
+        const increment = target / 50; // Анимация за 50 шагов
+        
+        const timer = setInterval(() => {
+            current += increment;
+            if (current >= target) {
+                current = target;
+                clearInterval(timer);
+            }
+            
+            if (suffix.classList.contains('percent')) {
+                stat.textContent = current.toFixed(1);
+            } else {
+                stat.textContent = Math.floor(current);
+            }
+        }, 30);
+    });
+}
+
+// Симуляция процесса сканирования
+function initScanProcess() {
+    const steps = document.querySelectorAll('.process-step');
+    let currentStep = 0;
+    
+    setInterval(() => {
+        steps.forEach(step => step.classList.remove('active'));
+        steps[currentStep].classList.add('active');
+        currentStep = (currentStep + 1) % steps.length;
+    }, 2000);
 }
 
 // Обработка формы
@@ -81,17 +183,18 @@ demoForm.addEventListener('submit', function(e) {
     
     // Имитация отправки
     const submitBtn = this.querySelector('button[type="submit"]');
-    const originalText = submitBtn.textContent;
+    const btnText = submitBtn.querySelector('.btn-text');
+    const originalText = btnText.textContent;
     
-    submitBtn.textContent = currentLang === 'ru' ? 'Отправка...' : 'Sending...';
+    btnText.textContent = currentLang === 'ru' ? 'Отправка...' : 'Sending...';
     submitBtn.disabled = true;
     
     setTimeout(() => {
         alert(currentLang === 'ru' 
-            ? 'Спасибо! Ваш запрос отправлен. Мы свяжемся с вами в ближайшее время.' 
-            : 'Thank you! Your request has been sent. We will contact you soon.');
+            ? 'Спасибо! Ваш запрос отправлен. Мы свяжемся с вами в течение 24 часов.' 
+            : 'Thank you! Your request has been sent. We will contact you within 24 hours.');
         
-        submitBtn.textContent = originalText;
+        btnText.textContent = originalText;
         submitBtn.disabled = false;
         this.reset();
     }, 1500);
@@ -115,29 +218,29 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     });
 });
 
-// Простая анимация появления элементов при скролле
-const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-        if (entry.isIntersecting) {
-            entry.target.style.opacity = '1';
-            entry.target.style.transform = 'translateY(0)';
-        }
-    });
-}, {
-    threshold: 0.1
-});
-
-// Наблюдаем за секциями
-document.querySelectorAll('.section').forEach(section => {
-    section.style.opacity = '0';
-    section.style.transform = 'translateY(20px)';
-    section.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-    observer.observe(section);
-});
-
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', () => {
-    // Показываем первую секцию сразу
-    document.querySelector('.hero').style.opacity = '1';
-    document.querySelector('.hero').style.transform = 'translateY(0)';
+    initScrollAnimations();
+    initHeroStatsAnimation();
+    initScanProcess();
+    
+    // Запуск анимации через небольшую задержку для плавности
+    setTimeout(() => {
+        const heroElements = document.querySelectorAll('.hero .animate-on-scroll');
+        heroElements.forEach((el, index) => {
+            setTimeout(() => {
+                el.classList.add('animated');
+            }, index * 200);
+        });
+    }, 300);
+});
+
+// Параллакс эффект для фона
+window.addEventListener('scroll', () => {
+    const scrolled = window.pageYOffset;
+    const heroBg = document.querySelector('.hero-bg-shape');
+    
+    if (heroBg) {
+        heroBg.style.transform = `translateY(${scrolled * 0.05}px)`;
+    }
 });
